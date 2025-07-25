@@ -5,7 +5,7 @@
     "license": "MIT",
     "notes": [
         "RedmineCLI has been installed!",
-        "Run 'redmine config set --url YOUR_REDMINE_URL --api-key YOUR_API_KEY' to get started.",
+        "Run 'redmine auth login' to get started.",
         "See https://github.com/arstella-ltd/RedmineCLI for more information."
     ],
     "architecture": {
