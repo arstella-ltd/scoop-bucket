@@ -1,0 +1,32 @@
+{
+    "version": "0.8.0",
+    "description": "Command-line interface for Redmine - Efficiently manage Redmine tickets from your terminal",
+    "homepage": "https://github.com/arstella-ltd/RedmineCLI",
+    "license": "MIT",
+    "notes": [
+        "RedmineCLI has been installed!",
+        "Run 'redmine config set --url YOUR_REDMINE_URL --api-key YOUR_API_KEY' to get started.",
+        "See https://github.com/arstella-ltd/RedmineCLI for more information."
+    ],
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/arstella-ltd/RedmineCLI/releases/download/v0.8.0/redmine-cli-win-x64.zip",
+            "hash": "020cbf536974a96b68e7a39dbdda0dfedbf5e5ee0abf8923bd9c55ab14aa18a7"
+        }
+    },
+    "bin": "redmine.exe",
+    "checkver": {
+        "github": "https://github.com/arstella-ltd/RedmineCLI"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/arstella-ltd/RedmineCLI/releases/download/v$version/redmine-cli-win-x64.zip"
+            }
+        },
+        "hash": {
+            "url": "$baseurl/checksums.txt",
+            "regex": "$sha256\\s+$fname"
+        }
+    }
+}

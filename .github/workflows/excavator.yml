@@ -1,0 +1,35 @@
+name: Excavator
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 6時間ごとに実行
+  workflow_dispatch:
+
+jobs:
+  excavate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Scoop
+        run: |
+          iwr -useb get.scoop.sh | iex
+          scoop install git
+      
+      - name: Check for updates
+        run: |
+          $apps = Get-ChildItem ./bucket -Filter *.json | ForEach-Object { $_.BaseName }
+          foreach ($app in $apps) {
+            scoop checkver $app -u
+          }
+      
+      - name: Commit changes
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git diff --cached --exit-code || git commit -m "Update apps"
+      
+      - name: Push changes
+        if: success()
+        run: git push
