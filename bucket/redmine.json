@@ -21,11 +21,11 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/arstella-ltd/RedmineCLI/releases/download/v$version/redmine-cli-win-x64.zip"
+                "url": "https://github.com/arstella-ltd/RedmineCLI/releases/download/v$version/redmine-cli-$version-win-x64.zip"
             }
         },
         "hash": {
-            "url": "$baseurl/checksums.txt",
+            "url": "$baseurl/redmine-cli-$version-checksums.txt",
             "regex": "$sha256\\s+$fname"
         }
     }

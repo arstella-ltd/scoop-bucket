@@ -1,0 +1,67 @@
+name: Validate Bucket
+
+on:
+  push:
+    branches: [ main, update-filename-convention ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Scoop
+      run: |
+        Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+        irm get.scoop.sh | iex
+        
+    - name: Add bucket for testing
+      run: |
+        scoop bucket add test-bucket $env:GITHUB_WORKSPACE
+        
+    - name: Validate manifest files
+      run: |
+        Get-ChildItem "$env:GITHUB_WORKSPACE\bucket" -Filter "*.json" | ForEach-Object {
+          Write-Host "Validating $($_.Name)..."
+          $manifest = Get-Content $_.FullName | ConvertFrom-Json
+          
+          # Check required fields
+          if (-not $manifest.version) {
+            throw "Missing version field in $($_.Name)"
+          }
+          if (-not $manifest.description) {
+            throw "Missing description field in $($_.Name)"
+          }
+          if (-not $manifest.homepage) {
+            throw "Missing homepage field in $($_.Name)"
+          }
+          if (-not $manifest.license) {
+            throw "Missing license field in $($_.Name)"
+          }
+          
+          # Validate URL format for autoupdate
+          if ($manifest.autoupdate) {
+            $url = $manifest.autoupdate.architecture.'64bit'.url
+            if ($url -notmatch '\$version') {
+              throw "Autoupdate URL must contain $version variable in $($_.Name)"
+            }
+            
+            # Check for new naming convention
+            if ($url -notmatch 'redmine-cli-\$version-') {
+              Write-Warning "URL does not follow new naming convention (redmine-cli-\$version-platform-arch) in $($_.Name)"
+            }
+          }
+          
+          Write-Host "✓ $($_.Name) is valid"
+        }
+        
+    - name: Test manifest format
+      run: |
+        # Test if Scoop can parse the manifests
+        Get-ChildItem "$env:GITHUB_WORKSPACE\bucket" -Filter "*.json" | ForEach-Object {
+          Write-Host "Testing Scoop parsing for $($_.Name)..."
+          scoop info "test-bucket/$($_.BaseName)"
+        }
