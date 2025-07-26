@@ -1,0 +1,101 @@
+name: Validate Bucket
+
+on:
+  push:
+    branches: [ main, update-filename-convention ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Validate JSON syntax
+      shell: pwsh
+      run: |
+        $manifests = Get-ChildItem "$env:GITHUB_WORKSPACE\bucket" -Filter "*.json"
+        $errors = 0
+        
+        foreach ($manifest in $manifests) {
+          Write-Host "Validating JSON syntax for $($manifest.Name)..."
+          try {
+            $null = Get-Content $manifest.FullName -Raw | ConvertFrom-Json -ErrorAction Stop
+            Write-Host "✓ $($manifest.Name) has valid JSON syntax" -ForegroundColor Green
+          } catch {
+            Write-Host "✗ $($manifest.Name) has invalid JSON syntax: $_" -ForegroundColor Red
+            $errors++
+          }
+        }
+        
+        if ($errors -gt 0) {
+          throw "$errors manifest(s) have invalid JSON syntax"
+        }
+    
+    - name: Validate manifest structure
+      shell: pwsh
+      run: |
+        $manifests = Get-ChildItem "$env:GITHUB_WORKSPACE\bucket" -Filter "*.json"
+        $errors = @()
+        
+        foreach ($file in $manifests) {
+          Write-Host "`nChecking $($file.Name)..." -ForegroundColor Cyan
+          $manifest = Get-Content $file.FullName | ConvertFrom-Json
+          
+          # Check required fields
+          $required = @('version', 'description', 'homepage', 'license')
+          foreach ($field in $required) {
+            if (-not $manifest.$field) {
+              $errors += "$($file.Name): Missing required field '$field'"
+            }
+          }
+          
+          # Check architecture
+          if (-not $manifest.architecture -and -not $manifest.url) {
+            $errors += "$($file.Name): Must have either 'url' or 'architecture' field"
+          }
+          
+          # Check autoupdate
+          if ($manifest.autoupdate) {
+            Write-Host "  Checking autoupdate configuration..."
+            
+            # Check URL pattern
+            if ($manifest.autoupdate.architecture) {
+              $url = $manifest.autoupdate.architecture.'64bit'.url
+              if ($url) {
+                if ($url -notmatch '\$version') {
+                  $errors += "$($file.Name): Autoupdate URL must contain `$version variable"
+                }
+                
+                # Check for new naming convention
+                if ($url -match 'redmine-cli') {
+                  if ($url -notmatch 'redmine-cli-\$version-') {
+                    Write-Host "  ⚠️  URL does not follow new naming convention (redmine-cli-`$version-platform-arch)" -ForegroundColor Yellow
+                  } else {
+                    Write-Host "  ✓ URL follows new naming convention" -ForegroundColor Green
+                  }
+                }
+              }
+            }
+            
+            # Check hash URL
+            if ($manifest.autoupdate.hash) {
+              $hashUrl = $manifest.autoupdate.hash.url
+              if ($hashUrl -and $hashUrl -match 'checksums\.txt') {
+                Write-Host "  ⚠️  Hash URL uses old checksums.txt format" -ForegroundColor Yellow
+              } elseif ($hashUrl -match 'redmine-cli-\$version-checksums\.txt') {
+                Write-Host "  ✓ Hash URL follows new naming convention" -ForegroundColor Green
+              }
+            }
+          }
+        }
+        
+        if ($errors.Count -gt 0) {
+          Write-Host "`nErrors found:" -ForegroundColor Red
+          $errors | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+          throw "$($errors.Count) validation error(s) found"
+        }
+        
+        Write-Host "`nAll manifests validated successfully!" -ForegroundColor Green
