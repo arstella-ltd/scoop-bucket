@@ -48,7 +48,7 @@ jobs:
                 $hasUpdates = $true
               }
             } catch {
-              Write-Host "Warning: Error checking $app: $_"
+              Write-Host "Warning: Error checking ${app}: $_"
             }
           }
           
