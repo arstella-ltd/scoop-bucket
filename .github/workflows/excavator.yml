@@ -22,11 +22,12 @@ jobs:
       
       - name: Check for updates
         run: |
-          # Scoopのbinディレクトリをパスに追加
-          $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
+          # Scoopのcheckverヘルパーをダウンロード
+          $helperPath = "$env:GITHUB_WORKSPACE\bin"
+          New-Item -ItemType Directory -Force -Path $helperPath | Out-Null
           
-          # カレントディレクトリをバケットのルートに設定
-          Push-Location $env:GITHUB_WORKSPACE
+          # Scoop-Core の checkver.ps1 をダウンロード
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/bin/checkver.ps1" -OutFile "$helperPath\checkver.ps1"
           
           # 各アプリケーションのアップデートをチェック
           $apps = Get-ChildItem ./bucket -Filter *.json | ForEach-Object { $_.BaseName }
@@ -35,28 +36,23 @@ jobs:
           foreach ($app in $apps) {
             Write-Host "Checking $app for updates..."
             try {
-              # checkverコマンドを実行（-uオプションでマニフェストを更新）
-              $output = scoop checkver $app -u 2>&1
+              # PR時は更新せずチェックのみ、それ以外は更新
+              if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+                & "$helperPath\checkver.ps1" -App "$app" -Dir "$env:GITHUB_WORKSPACE\bucket" -NoUpdate
+              } else {
+                & "$helperPath\checkver.ps1" -App "$app" -Dir "$env:GITHUB_WORKSPACE\bucket"
+              }
+              
               if ($LASTEXITCODE -eq 0) {
                 Write-Host "Successfully checked $app"
-                if ($output -match "autoupdate") {
-                  $hasUpdates = $true
-                }
-              } else {
-                Write-Host "No updates found for $app"
+                $hasUpdates = $true
               }
             } catch {
-              Write-Host "Error checking $app: $_"
+              Write-Host "Warning: Error checking $app: $_"
             }
           }
           
-          Pop-Location
-          
-          # アップデートがあった場合のみ成功とする
-          if (-not $hasUpdates) {
-            Write-Host "No updates found for any apps"
-            exit 0
-          }
+          Write-Host "Check completed."
       
       - name: Commit changes
         if: github.event_name != 'pull_request'
