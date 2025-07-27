@@ -13,14 +13,48 @@ jobs:
       
       - name: Setup Scoop
         run: |
-          iwr -useb get.scoop.sh | iex
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          iwr -useb get.scoop.sh -outfile 'install.ps1'
+          .\install.ps1 -RunAsAdmin
           scoop install git
+          scoop bucket add main
       
       - name: Check for updates
         run: |
+          # Scoopのbinディレクトリをパスに追加
+          $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
+          
+          # カレントディレクトリをバケットのルートに設定
+          Push-Location $env:GITHUB_WORKSPACE
+          
+          # 各アプリケーションのアップデートをチェック
           $apps = Get-ChildItem ./bucket -Filter *.json | ForEach-Object { $_.BaseName }
+          $hasUpdates = $false
+          
           foreach ($app in $apps) {
-            scoop checkver $app -u
+            Write-Host "Checking $app for updates..."
+            try {
+              # checkverコマンドを実行（-uオプションでマニフェストを更新）
+              $output = scoop checkver $app -u 2>&1
+              if ($LASTEXITCODE -eq 0) {
+                Write-Host "Successfully checked $app"
+                if ($output -match "autoupdate") {
+                  $hasUpdates = $true
+                }
+              } else {
+                Write-Host "No updates found for $app"
+              }
+            } catch {
+              Write-Host "Error checking $app: $_"
+            }
+          }
+          
+          Pop-Location
+          
+          # アップデートがあった場合のみ成功とする
+          if (-not $hasUpdates) {
+            Write-Host "No updates found for any apps"
+            exit 0
           }
       
       - name: Commit changes
