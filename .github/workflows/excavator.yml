@@ -22,12 +22,23 @@ jobs:
       
       - name: Check for updates
         run: |
-          # Scoopのcheckverヘルパーをダウンロード
-          $helperPath = "$env:GITHUB_WORKSPACE\bin"
-          New-Item -ItemType Directory -Force -Path $helperPath | Out-Null
+          # Scoopのヘルパーディレクトリを作成
+          $binPath = "$env:GITHUB_WORKSPACE\bin"
+          $libPath = "$env:GITHUB_WORKSPACE\lib"
+          New-Item -ItemType Directory -Force -Path $binPath | Out-Null
+          New-Item -ItemType Directory -Force -Path $libPath | Out-Null
           
-          # Scoop-Core の checkver.ps1 をダウンロード
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/bin/checkver.ps1" -OutFile "$helperPath\checkver.ps1"
+          # Scoop-Core の必要なファイルをダウンロード
+          $baseUrl = "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master"
+          
+          # checkver.ps1をダウンロード
+          Invoke-WebRequest -Uri "$baseUrl/bin/checkver.ps1" -OutFile "$binPath\checkver.ps1"
+          
+          # 必要なライブラリをダウンロード
+          $libs = @('core.ps1', 'json.ps1', 'versions.ps1', 'autoupdate.ps1', 'manifest.ps1')
+          foreach ($lib in $libs) {
+            Invoke-WebRequest -Uri "$baseUrl/lib/$lib" -OutFile "$libPath\$lib"
+          }
           
           # 各アプリケーションのアップデートをチェック
           $apps = Get-ChildItem ./bucket -Filter *.json | ForEach-Object { $_.BaseName }
@@ -38,9 +49,9 @@ jobs:
             try {
               # PR時は更新せずチェックのみ、それ以外は更新
               if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
-                & "$helperPath\checkver.ps1" -App "$app" -Dir "$env:GITHUB_WORKSPACE\bucket" -NoUpdate
+                & "$binPath\checkver.ps1" -App "$app" -Dir "$env:GITHUB_WORKSPACE\bucket" -NoUpdate
               } else {
-                & "$helperPath\checkver.ps1" -App "$app" -Dir "$env:GITHUB_WORKSPACE\bucket"
+                & "$binPath\checkver.ps1" -App "$app" -Dir "$env:GITHUB_WORKSPACE\bucket"
               }
               
               if ($LASTEXITCODE -eq 0) {
