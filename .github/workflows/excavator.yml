@@ -35,9 +35,13 @@ jobs:
           Invoke-WebRequest -Uri "$baseUrl/bin/checkver.ps1" -OutFile "$binPath\checkver.ps1"
           
           # 必要なライブラリをダウンロード
-          $libs = @('core.ps1', 'json.ps1', 'versions.ps1', 'autoupdate.ps1', 'manifest.ps1')
+          $libs = @('core.ps1', 'json.ps1', 'versions.ps1', 'autoupdate.ps1', 'manifest.ps1', 'buckets.ps1', 'install.ps1', 'shortcuts.ps1', 'psmodules.ps1', 'decompress.ps1', 'depends.ps1', 'config.ps1')
           foreach ($lib in $libs) {
-            Invoke-WebRequest -Uri "$baseUrl/lib/$lib" -OutFile "$libPath\$lib"
+            try {
+              Invoke-WebRequest -Uri "$baseUrl/lib/$lib" -OutFile "$libPath\$lib"
+            } catch {
+              Write-Host "Warning: Could not download $lib"
+            }
           }
           
           # 各アプリケーションのアップデートをチェック
