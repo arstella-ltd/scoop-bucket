@@ -6,8 +6,7 @@
     "architecture": {
         "64bit": {
             "url": "https://github.com/arstella-ltd/Qx/releases/download/v0.1.0/qx-0.1.0-win-x64.zip",
-            "hash": "5d01392447113a2b137c174591a9ee78ed4741aeb4c568a56bb38869cbd3fa12",
-            "extract_dir": "qx-0.1.0-win-x64"
+            "hash": "5d01392447113a2b137c174591a9ee78ed4741aeb4c568a56bb38869cbd3fa12"
         }
     },
     "bin": "qx.exe",
@@ -17,8 +16,7 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/arstella-ltd/Qx/releases/download/v$version/qx-$version-win-x64.zip",
-                "extract_dir": "qx-$version-win-x64"
+                "url": "https://github.com/arstella-ltd/Qx/releases/download/v$version/qx-$version-win-x64.zip"
             }
         },
         "hash": {
